@@ -2,10 +2,12 @@
   box-sizing: border-box;
 }
 
+/* Elms Sans Formatting */
+
 /* Overall Formatting */
 body {
   text-align: center;
-  font-family: 'Elms+Sans', sans-serif;;
+  font-family: "Elms Sans", sans-serif;
   min-height: 100vh;
   margin: 0;
   padding: 48px 20px;
