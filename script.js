@@ -305,37 +305,56 @@ function uploadBackground() {
   let file = fileInput.files[0];
 
   if (!file) {
-    alert("Please choose an image first.");
-    return;
-  }
-
-  if (!file.type.startsWith("image/")) {
-    alert("Please upload an image file.");
+    alert("Choose an image first.");
     return;
   }
 
   let reader = new FileReader();
 
   reader.onload = function (event) {
-    let imageData = event.target.result;
+    let img = new Image();
 
-    try {
-      backgrounds.push(imageData);
-      localStorage.setItem("backgrounds", JSON.stringify(backgrounds));
+    img.onload = function () {
+      // Create canvas
+      let canvas = document.createElement("canvas");
+      let ctx = canvas.getContext("2d");
 
-      setBackground(imageData);
-      renderBackgroundGallery();
+      // Resize dimensions
+      let maxWidth = 1200;
+      let scale = maxWidth / img.width;
 
-      fileInput.value = "";
-    } catch (error) {
-      alert("Image is probably too large for browser storage. Try a smaller image.");
-      console.error(error);
-    }
+      canvas.width = maxWidth;
+      canvas.height = img.height * scale;
+
+      // Draw resized image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Compress image
+      let compressedImage = canvas.toDataURL("image/jpeg", 0.7);
+
+      try {
+        backgrounds.push(compressedImage);
+
+        localStorage.setItem(
+          "backgrounds",
+          JSON.stringify(backgrounds)
+        );
+
+        setBackground(compressedImage);
+        renderBackgroundGallery();
+
+        fileInput.value = "";
+      } catch (error) {
+        alert("Storage full. Try removing old backgrounds.");
+        console.error(error);
+      }
+    };
+
+    img.src = event.target.result;
   };
 
   reader.readAsDataURL(file);
 }
-
 function setBackground(imageData) {
   document.body.style.backgroundImage = "url('" + imageData + "')";
   document.body.style.backgroundSize = "cover";
