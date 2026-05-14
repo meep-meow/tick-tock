@@ -298,8 +298,6 @@ function resetStats() {
 }
 
 // Customization
-let backgrounds = JSON.parse(localStorage.getItem("backgrounds")) || [];
-
 function uploadBackground() {
   let fileInput = document.getElementById("backgroundUpload");
   let file = fileInput.files[0];
@@ -312,78 +310,20 @@ function uploadBackground() {
   let reader = new FileReader();
 
   reader.onload = function (event) {
-    let img = new Image();
-
-    img.onload = function () {
-      // Create canvas
-      let canvas = document.createElement("canvas");
-      let ctx = canvas.getContext("2d");
-
-      // Resize dimensions
-      let maxWidth = 1200;
-      let scale = maxWidth / img.width;
-
-      canvas.width = maxWidth;
-      canvas.height = img.height * scale;
-
-      // Draw resized image
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      // Compress image
-      let compressedImage = canvas.toDataURL("image/jpeg", 0.7);
-
-      try {
-        backgrounds.push(compressedImage);
-
-        localStorage.setItem(
-          "backgrounds",
-          JSON.stringify(backgrounds)
-        );
-
-        setBackground(compressedImage);
-        renderBackgroundGallery();
-
-        fileInput.value = "";
-      } catch (error) {
-        alert("Storage full. Try removing old backgrounds.");
-        console.error(error);
-      }
-    };
-
-    img.src = event.target.result;
+    setBackground(event.target.result);
+    fileInput.value = "";
   };
 
   reader.readAsDataURL(file);
 }
+
 function setBackground(imageData) {
   document.body.style.backgroundImage = "url('" + imageData + "')";
   document.body.style.backgroundSize = "cover";
   document.body.style.backgroundPosition = "center";
   document.body.style.backgroundAttachment = "fixed";
-
-  localStorage.setItem("selectedBackground", imageData);
 }
 
-function renderBackgroundGallery() {
-  let gallery = document.getElementById("backgroundGallery");
-  gallery.innerHTML = "";
-
-  backgrounds.forEach(function (bg, index) {
-    let img = document.createElement("img");
-    img.src = bg;
-    img.classList.add("background-thumb");
-    img.onclick = function () {
-      setBackground(bg);
-    };
-
-    gallery.appendChild(img);
-  });
+function clearBackground() {
+  document.body.style.backgroundImage = "";
 }
-
-let savedSelectedBackground = localStorage.getItem("selectedBackground");
-
-if (savedSelectedBackground) {
-  setBackground(savedSelectedBackground);
-}
-
-renderBackgroundGallery();
