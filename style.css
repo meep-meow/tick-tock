@@ -44,6 +44,7 @@ body {
   background: transparent;
   box-shadow: none;
   border: none;
+  font-family: "Elms Sans", sans-serif;
 }
 
 .sidebar button:hover {
