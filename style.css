@@ -75,6 +75,7 @@ body {
   outline: none;
   box-shadow: none;
   font-family: "Elms Sans", sans-serif;
+  text-decoration: none;
 
   padding: 0;
   margin: 6px 12px;
