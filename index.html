@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Study Timer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+<!-- Tabs for each section -->
+<div class="layout">
+
+  <div class="sidebar">
+    <button onclick="showSection('stopwatch')">Stopwatch</button>
+    <button onclick="showSection('pomodoro')">Pomodoro</button>
+    <button onclick="showSection('stats')">Stats</button>
+    <button onclick="showSection('customize')">Customize</button>
+  </div>
+
+  <div class="main">
+    <!-- ALL your sections go here -->
+    <!-- Stopwatch -->
+<section id="stopwatch" class="page">
+  <h3 id="stopwatchDisplay">00:00:00</h3>
+
+  <button onclick="startStopwatch()">Start</button>
+  <button onclick="pauseStopwatch()">Pause</button>
+  <button onclick="resetStopwatch()">Reset</button>
+  <button onclick="logStopwatchSession()">Log Session</button>
+</section>
+
+<!-- Pomodoro -->
+<section id="pomodoro" class="page hidden">
+  <h3 id="pomodoroDisplay">25:00</h3>
+
+  <button onclick="startPomodoro()">Start</button>
+  <button onclick="pausePomodoro()">Pause</button>
+  <button onclick="resetPomodoro()">Reset</button>
+
+  <div>
+    <button onclick="setPomodoroMode('focus')">Focus</button>
+    <button onclick="setPomodoroMode('shortBreak')">Short Break</button>
+    <button onclick="setPomodoroMode('longBreak')">Long Break</button>
+  </div>
+</section>
+
+<!-- Statistics -->
+<section id="stats" class="page hidden">
+  <p id="sessionCount">Sessions: 0</p>
+  <p id="todayTime">Today: 0 minutes</p>
+  <p id="totalTime">Total time: 0 minutes</p>
+  <button onclick="resetStats()">Reset Stats</button>
+  <h3 id="calendarTitle"></h3>
+  <div>
+  <button onclick="changeMonth(-1)">←</button>
+  <span id="calendarTitle"></span>
+  <button onclick="changeMonth(1)">→</button>
+</div>
+
+  <div id="calendar"></div>
+
+</section>
+
+<!-- Customization -->
+<section id="customize" class="page hidden">
+
+  <input type="file" id="backgroundUpload" accept="image/*">
+
+  <button onclick="uploadBackground()">Add Background</button>
+
+  <h4>Gallery</h4>
+  <div id="backgroundGallery"></div>
+</section>
+    
+    <section id="stopwatch" class="page">...</section>
+    <section id="pomodoro" class="page hidden">...</section>
+    <section id="stats" class="page hidden">...</section>
+    <section id="customize" class="page hidden">...</section>
+
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
