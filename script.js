@@ -309,18 +309,28 @@ function uploadBackground() {
     return;
   }
 
+  if (!file.type.startsWith("image/")) {
+    alert("Please upload an image file.");
+    return;
+  }
+
   let reader = new FileReader();
 
   reader.onload = function (event) {
     let imageData = event.target.result;
 
-    backgrounds.push(imageData);
-    localStorage.setItem("backgrounds", JSON.stringify(backgrounds));
+    try {
+      backgrounds.push(imageData);
+      localStorage.setItem("backgrounds", JSON.stringify(backgrounds));
 
-    setBackground(imageData);
-    renderBackgroundGallery();
+      setBackground(imageData);
+      renderBackgroundGallery();
 
-    fileInput.value = "";
+      fileInput.value = "";
+    } catch (error) {
+      alert("Image is probably too large for browser storage. Try a smaller image.");
+      console.error(error);
+    }
   };
 
   reader.readAsDataURL(file);
