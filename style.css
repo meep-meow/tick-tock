@@ -4,6 +4,13 @@
 
 /* Elms Sans Formatting */
 
+.elms-sans-class {
+  font-family: "Elms Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal;
+}
+
 /* Overall Formatting */
 body {
   text-align: center;
