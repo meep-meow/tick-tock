@@ -11,7 +11,9 @@ let pomodoroLengths = {
   longBreak: 15 * 60
 };
 
-let pomodoroSeconds = pomodoroLengths.focus;
+let pomodoroEndTime = null;
+let pomodoroRemainingSeconds =
+  pomodoroLengths.focus;
 
 function formatMinutes(seconds) {
   let mins = Math.floor(seconds / 60);
@@ -25,10 +27,24 @@ function formatMinutes(seconds) {
 }
 
 function updatePomodoroDisplay() {
-  document.getElementById("pomodoroDisplay").textContent =
-    formatMinutes(pomodoroSeconds);
+  let remaining = pomodoroRemainingSeconds;
 
-  document.getElementById("pomodoroMode").textContent =
+  if (pomodoroEndTime) {
+    remaining = Math.max(
+      0,
+      Math.floor(
+        (pomodoroEndTime - Date.now()) / 1000
+      )
+    );
+  }
+
+  document.getElementById(
+    "pomodoroDisplay"
+  ).textContent = formatMinutes(remaining);
+
+  document.getElementById(
+    "pomodoroMode"
+  ).textContent =
     pomodoroMode === "focus"
       ? "Focus"
       : pomodoroMode === "shortBreak"
@@ -39,31 +55,70 @@ function updatePomodoroDisplay() {
 function startPomodoro() {
   if (pomodoroInterval) return;
 
+  pomodoroEndTime =
+    Date.now() +
+    pomodoroRemainingSeconds * 1000;
+
   pomodoroInterval = setInterval(function () {
-    if (pomodoroSeconds > 0) {
-      pomodoroSeconds--;
-      updatePomodoroDisplay();
-    } else {
+
+    let remaining = Math.max(
+      0,
+      Math.floor(
+        (pomodoroEndTime - Date.now()) / 1000
+      )
+    );
+
+    pomodoroRemainingSeconds = remaining;
+
+    updatePomodoroDisplay();
+
+    if (remaining <= 0) {
       completePomodoro();
     }
+
   }, 1000);
 }
 
 function pausePomodoro() {
+
+  if (pomodoroEndTime) {
+
+    pomodoroRemainingSeconds = Math.max(
+      0,
+      Math.floor(
+        (pomodoroEndTime - Date.now()) / 1000
+      )
+    );
+
+  }
+
+  pomodoroEndTime = null;
+
   clearInterval(pomodoroInterval);
   pomodoroInterval = null;
+
+  updatePomodoroDisplay();
 }
 
 function resetPomodoro() {
+
   pausePomodoro();
-  pomodoroSeconds = pomodoroLengths[pomodoroMode];
+
+  pomodoroRemainingSeconds =
+    pomodoroLengths[pomodoroMode];
+
   updatePomodoroDisplay();
 }
 
 function setPomodoroMode(mode) {
+
   pausePomodoro();
+
   pomodoroMode = mode;
-  pomodoroSeconds = pomodoroLengths[mode];
+
+  pomodoroRemainingSeconds =
+    pomodoroLengths[mode];
+
   updatePomodoroDisplay();
 }
 
@@ -90,7 +145,8 @@ function completePomodoro() {
 
 
 // Stopwatch
-let stopwatchSeconds = 0;
+let stopwatchStartTime = null;
+let stopwatchElapsedBeforePause = 0;
 let stopwatchInterval = null;
 
 let sessions = JSON.parse(localStorage.getItem("sessions")) || [];
@@ -124,46 +180,76 @@ function formatTime(seconds) {
 }
 
 function updateStopwatchDisplay() {
+  let elapsed = stopwatchElapsedBeforePause;
+
+  if (stopwatchStartTime) {
+    elapsed += Math.floor(
+      (Date.now() - stopwatchStartTime) / 1000
+    );
+  }
+
   document.getElementById("stopwatchDisplay").textContent =
-    formatTime(stopwatchSeconds);
+    formatTime(elapsed);
 }
 
 function startStopwatch() {
   if (stopwatchInterval) return;
 
+  stopwatchStartTime = Date.now();
+
   stopwatchInterval = setInterval(function () {
-    stopwatchSeconds++;
     updateStopwatchDisplay();
   }, 1000);
 }
 
 function pauseStopwatch() {
+  if (stopwatchStartTime) {
+    stopwatchElapsedBeforePause += Math.floor(
+      (Date.now() - stopwatchStartTime) / 1000
+    );
+  }
+
+  stopwatchStartTime = null;
+
   clearInterval(stopwatchInterval);
   stopwatchInterval = null;
+
+  updateStopwatchDisplay();
 }
 
 function resetStopwatch() {
   pauseStopwatch();
-  stopwatchSeconds = 0;
+
+  stopwatchElapsedBeforePause = 0;
+
   updateStopwatchDisplay();
 }
 
 function logStopwatchSession() {
-  if (stopwatchSeconds === 0) return;
+  let totalSeconds = stopwatchElapsedBeforePause;
+
+  if (stopwatchStartTime) {
+    totalSeconds += Math.floor(
+      (Date.now() - stopwatchStartTime) / 1000
+    );
+  }
+
+  if (totalSeconds === 0) return;
 
   sessions.push({
     type: "stopwatch",
-    durationSeconds: stopwatchSeconds,
+    durationSeconds: totalSeconds,
     date: new Date().toISOString().split("T")[0]
   });
 
-  localStorage.setItem("sessions", JSON.stringify(sessions));
+  localStorage.setItem(
+    "sessions",
+    JSON.stringify(sessions)
+  );
 
   resetStopwatch();
   updateStats();
-  alert("Session logged!");
 }
-
 // Stats
 // Calendar
 
