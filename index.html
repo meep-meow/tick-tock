@@ -23,42 +23,71 @@
     <!-- ALL your sections go here -->
     <!-- Stopwatch -->
 <section id="stopwatch" class="page">
+  <h2>Stopwatch</h2>
   <h3 id="stopwatchDisplay">00:00:00</h3>
-
-  <button onclick="startStopwatch()">Start</button>
-  <button onclick="pauseStopwatch()">Pause</button>
-  <button onclick="resetStopwatch()">Reset</button>
-  <button onclick="logStopwatchSession()">Log Session</button>
+  <button class="text-button" onclick="startStopwatch()">
+    Start
+  </button>
+  <button class="text-button" onclick="pauseStopwatch()">
+    Pause
+  </button>
+  <button class="text-button" onclick="resetStopwatch()">
+    Reset
+  </button>
+  <button class="text-button" onclick="logStopwatchSession()">
+    Log Session
+  </button>
 </section>
-
 <!-- Pomodoro -->
 <section id="pomodoro" class="page hidden">
+  <h2 id="pomodoroMode">Focus</h2>
   <h3 id="pomodoroDisplay">25:00</h3>
-
-  <button onclick="startPomodoro()">Start</button>
-  <button onclick="pausePomodoro()">Pause</button>
-  <button onclick="resetPomodoro()">Reset</button>
-
+  <button class="text-button" onclick="startPomodoro()">
+    Start
+  </button>
+  <button class="text-button" onclick="pausePomodoro()">
+    Pause
+  </button>
+  <button class="text-button" onclick="resetPomodoro()">
+    Reset
+  </button>
   <div>
-    <button onclick="setPomodoroMode('focus')">Focus</button>
-    <button onclick="setPomodoroMode('shortBreak')">Short Break</button>
-    <button onclick="setPomodoroMode('longBreak')">Long Break</button>
+    <button class="text-button" onclick="setPomodoroMode('focus')">
+      Focus
+    </button>
+    <button class="text-button" onclick="setPomodoroMode('shortBreak')">
+      Short Break
+    </button>
+    <button class="text-button" onclick="setPomodoroMode('longBreak')">
+      Long Break
+    </button>
   </div>
+
 </section>
 
 <!-- Statistics -->
 <section id="stats" class="page hidden">
-  <p id="sessionCount">Sessions: 0</p>
-  <p id="todayTime">Today: 0 minutes</p>
-  <p id="totalTime">Total time: 0 minutes</p>
-  <button onclick="resetStats()">Reset Stats</button>
-  <h3 id="calendarTitle"></h3>
-  <div>
-  <button onclick="changeMonth(-1)">←</button>
-  <span id="calendarTitle"></span>
-  <button onclick="changeMonth(1)">→</button>
-</div>
-
+  <h2>Statistics</h2>
+  <p id="sessionCount">
+    Sessions: 0
+  </p>
+  <p id="pomodoroCount">
+    Pomodoro sessions: 0
+  </p>
+  <p id="todayTime">
+    Today: 0 minutes
+  </p>
+  <p id="totalTime">
+    Total time: 0 days, 0 hours, 0 minutes
+  </p>
+  <button class="text-button" onclick="resetStats()">
+    Reset Stats
+  </button>
+  <div class="calendar-navigation">
+    <button onclick="changeMonth(-1)">←</button>
+    <span id="calendarTitle"></span>
+    <button onclick="changeMonth(1)">→</button>
+  </div>
   <div id="calendar"></div>
 
 </section>
