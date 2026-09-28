@@ -967,3 +967,11 @@ function setBackground(imageData) {
 function clearBackground() {
   document.body.style.backgroundImage = "";
 }
+
+function showSection(sectionId) {
+  document.querySelectorAll(".page").forEach(function (page) {
+    page.classList.add("hidden");
+  });
+
+  document.getElementById(sectionId).classList.remove("hidden");
+}
