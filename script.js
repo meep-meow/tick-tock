@@ -932,11 +932,146 @@ function restorePomodoro() {
 // ========================================
 // START APP
 // ========================================
+function showSection(sectionId) {
+  document.querySelectorAll(".page").forEach(function (page) {
+    page.classList.add("hidden");
+  });
+
+  document.getElementById(sectionId).classList.remove("hidden");
+}
 
 restoreStopwatch();
 restorePomodoro();
 updateStats();
 
+// ========================================
+// CALENDAR
+// ========================================
+
+function generateCalendar() {
+  let calendar = document.getElementById("calendar");
+
+  if (!calendar) return;
+
+  calendar.innerHTML = "";
+
+  let weekdays = [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"
+  ];
+
+  weekdays.forEach(function (dayName) {
+    let weekdayDiv = document.createElement("div");
+
+    weekdayDiv.classList.add("weekday");
+    weekdayDiv.textContent = dayName;
+
+    calendar.appendChild(weekdayDiv);
+  });
+
+  let today = new Date();
+
+  let displayDate = new Date(
+    today.getFullYear(),
+    today.getMonth() + currentMonthOffset,
+    1
+  );
+
+  let year = displayDate.getFullYear();
+  let month = displayDate.getMonth();
+
+  let firstDay = new Date(year, month, 1);
+  let lastDay = new Date(year, month + 1, 0);
+
+  let startDayOfWeek = firstDay.getDay();
+  let daysInMonth = lastDay.getDate();
+
+  let calendarTitle =
+    document.getElementById("calendarTitle");
+
+  if (calendarTitle) {
+    calendarTitle.textContent =
+      displayDate.toLocaleString("default", {
+        month: "long",
+        year: "numeric"
+      });
+  }
+
+  // Empty spaces before first day
+  for (let i = 0; i < startDayOfWeek; i++) {
+    let emptyDiv =
+      document.createElement("div");
+
+    emptyDiv.classList.add("day");
+    emptyDiv.style.visibility = "hidden";
+
+    calendar.appendChild(emptyDiv);
+  }
+
+  // Days
+  for (let day = 1; day <= daysInMonth; day++) {
+
+    let date =
+      new Date(year, month, day);
+
+    let dateStr =
+      getLocalDateString(date);
+
+    let daySeconds =
+      sessions
+        .filter(function (session) {
+          return session.date === dateStr;
+        })
+        .reduce(function (sum, session) {
+          return sum + session.durationSeconds;
+        }, 0);
+
+    let minutes =
+      Math.floor(daySeconds / 60);
+
+    let dayDiv =
+      document.createElement("div");
+
+    dayDiv.classList.add("day");
+
+    // Heatmap levels
+    if (minutes >= 120) {
+      dayDiv.classList.add("level-4");
+    } else if (minutes >= 60) {
+      dayDiv.classList.add("level-3");
+    } else if (minutes >= 30) {
+      dayDiv.classList.add("level-2");
+    } else if (minutes > 0) {
+      dayDiv.classList.add("level-1");
+    }
+
+    // Highlight today
+    if (
+      dateStr ===
+      getLocalDateString()
+    ) {
+      dayDiv.classList.add("today");
+    }
+
+    dayDiv.textContent = day;
+
+    dayDiv.title =
+      minutes + " minutes logged";
+
+    calendar.appendChild(dayDiv);
+  }
+}
+
+
+function changeMonth(direction) {
+  currentMonthOffset += direction;
+  generateCalendar();
+}
 // Customization
 function uploadBackground() {
   let fileInput = document.getElementById("backgroundUpload");
@@ -966,12 +1101,4 @@ function setBackground(imageData) {
 
 function clearBackground() {
   document.body.style.backgroundImage = "";
-}
-
-function showSection(sectionId) {
-  document.querySelectorAll(".page").forEach(function (page) {
-    page.classList.add("hidden");
-  });
-
-  document.getElementById(sectionId).classList.remove("hidden");
 }
