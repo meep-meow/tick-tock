@@ -1,387 +1,941 @@
 // Past months scroll
 let currentMonthOffset = 0; // 0 = this month, -1 = last month, etc.
+// ========================================
+// SESSION DATA
+// ========================================
 
-// Pomodoro
-let pomodoroInterval = null;
-let pomodoroMode = "focus";
+let sessions =
+  JSON.parse(localStorage.getItem("sessions")) || [];
 
-let pomodoroLengths = {
-  focus: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 15 * 60
-};
 
-let pomodoroEndTime = null;
-let pomodoroRemainingSeconds =
-  pomodoroLengths.focus;
+// ========================================
+// DATE HELPER
+// ========================================
 
-function formatMinutes(seconds) {
-  let mins = Math.floor(seconds / 60);
+// Gets the date using YOUR local timezone,
+// rather than UTC.
+
+function getLocalDateString(date = new Date()) {
+  let year = date.getFullYear();
+
+  let month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  let day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return year + "-" + month + "-" + day;
+}
+
+
+// ========================================
+// GENERAL TIME FORMATTING
+// ========================================
+
+function formatTime(seconds) {
+
+  let hours = Math.floor(seconds / 3600);
+
+  let minutes = Math.floor(
+    (seconds % 3600) / 60
+  );
+
   let secs = seconds % 60;
 
   return (
-    String(mins).padStart(2, "0") +
+    String(hours).padStart(2, "0") +
+    ":" +
+    String(minutes).padStart(2, "0") +
     ":" +
     String(secs).padStart(2, "0")
   );
 }
 
-function updatePomodoroDisplay() {
-  let remaining = pomodoroRemainingSeconds;
 
-  if (pomodoroEndTime) {
-    remaining = Math.max(
-      0,
-      Math.floor(
-        (pomodoroEndTime - Date.now()) / 1000
-      )
-    );
-  }
+function formatMinutes(seconds) {
 
-  document.getElementById(
-    "pomodoroDisplay"
-  ).textContent = formatMinutes(remaining);
+  let minutes = Math.floor(seconds / 60);
+  let secs = seconds % 60;
 
-  document.getElementById(
-    "pomodoroMode"
-  ).textContent =
-    pomodoroMode === "focus"
-      ? "Focus"
-      : pomodoroMode === "shortBreak"
-      ? "Short Break"
-      : "Long Break";
+  return (
+    String(minutes).padStart(2, "0") +
+    ":" +
+    String(secs).padStart(2, "0")
+  );
 }
 
+
+// Converts total seconds into:
+// 2 days, 4 hours, 17 minutes
+
+function formatTotalTime(seconds) {
+
+  let days = Math.floor(
+    seconds / 86400
+  );
+
+  let hours = Math.floor(
+    (seconds % 86400) / 3600
+  );
+
+  let minutes = Math.floor(
+    (seconds % 3600) / 60
+  );
+
+  return (
+    days + " days, " +
+    hours + " hours, " +
+    minutes + " minutes"
+  );
+}
+
+
+
+// ========================================
+// STOPWATCH
+// ========================================
+
+let stopwatchStartTime = null;
+
+let stopwatchElapsedBeforePause = 0;
+
+let stopwatchInterval = null;
+
+
+// ----------------------------------------
+// Display
+// ----------------------------------------
+
+function getStopwatchSeconds() {
+
+  let elapsed =
+    stopwatchElapsedBeforePause;
+
+  if (stopwatchStartTime !== null) {
+
+    elapsed += Math.floor(
+      (Date.now() - stopwatchStartTime) / 1000
+    );
+
+  }
+
+  return elapsed;
+}
+
+
+function updateStopwatchDisplay() {
+
+  let display =
+    document.getElementById(
+      "stopwatchDisplay"
+    );
+
+  if (!display) return;
+
+  display.textContent =
+    formatTime(getStopwatchSeconds());
+}
+
+
+// ----------------------------------------
+// Save stopwatch state
+// ----------------------------------------
+
+function saveStopwatchState() {
+
+  let state = {
+    startTime: stopwatchStartTime,
+    elapsedBeforePause:
+      stopwatchElapsedBeforePause
+  };
+
+  localStorage.setItem(
+    "stopwatchState",
+    JSON.stringify(state)
+  );
+}
+
+
+// ----------------------------------------
+// Start
+// ----------------------------------------
+
+function startStopwatch() {
+
+  // Already running
+  if (stopwatchStartTime !== null) {
+    return;
+  }
+
+  stopwatchStartTime = Date.now();
+
+  saveStopwatchState();
+
+  stopwatchInterval =
+    setInterval(function () {
+
+      updateStopwatchDisplay();
+
+    }, 1000);
+
+  updateStopwatchDisplay();
+}
+
+
+// ----------------------------------------
+// Pause
+// ----------------------------------------
+
+function pauseStopwatch() {
+
+  if (stopwatchStartTime !== null) {
+
+    stopwatchElapsedBeforePause +=
+      Math.floor(
+        (
+          Date.now() -
+          stopwatchStartTime
+        ) / 1000
+      );
+
+  }
+
+  stopwatchStartTime = null;
+
+  clearInterval(stopwatchInterval);
+
+  stopwatchInterval = null;
+
+  saveStopwatchState();
+
+  updateStopwatchDisplay();
+}
+
+
+// ----------------------------------------
+// Reset
+// ----------------------------------------
+
+function resetStopwatch() {
+
+  clearInterval(stopwatchInterval);
+
+  stopwatchInterval = null;
+
+  stopwatchStartTime = null;
+
+  stopwatchElapsedBeforePause = 0;
+
+  localStorage.removeItem(
+    "stopwatchState"
+  );
+
+  updateStopwatchDisplay();
+}
+
+
+// ----------------------------------------
+// Log stopwatch session
+// ----------------------------------------
+
+function logStopwatchSession() {
+
+  let totalSeconds =
+    getStopwatchSeconds();
+
+  if (totalSeconds <= 0) {
+    return;
+  }
+
+  sessions.push({
+
+    type: "stopwatch",
+
+    durationSeconds:
+      totalSeconds,
+
+    date:
+      getLocalDateString()
+
+  });
+
+  saveSessions();
+
+  resetStopwatch();
+
+  updateStats();
+}
+
+
+
+// ========================================
+// POMODORO
+// ========================================
+
+let pomodoroLengths = {
+
+  focus: 25 * 60,
+
+  shortBreak: 5 * 60,
+
+  longBreak: 15 * 60
+
+};
+
+
+let pomodoroMode = "focus";
+
+let pomodoroRemainingSeconds =
+  pomodoroLengths.focus;
+
+let pomodoroEndTime = null;
+
+let pomodoroInterval = null;
+
+
+// ----------------------------------------
+// Pomodoro display
+// ----------------------------------------
+
+function getPomodoroRemainingSeconds() {
+
+  if (pomodoroEndTime !== null) {
+
+    return Math.max(
+      0,
+
+      Math.ceil(
+        (
+          pomodoroEndTime -
+          Date.now()
+        ) / 1000
+      )
+    );
+
+  }
+
+  return pomodoroRemainingSeconds;
+}
+
+
+function updatePomodoroDisplay() {
+
+  let remaining =
+    getPomodoroRemainingSeconds();
+
+  let display =
+    document.getElementById(
+      "pomodoroDisplay"
+    );
+
+  if (display) {
+
+    display.textContent =
+      formatMinutes(remaining);
+
+  }
+
+
+  let modeTitle =
+    document.getElementById(
+      "pomodoroMode"
+    );
+
+  if (modeTitle) {
+
+    if (pomodoroMode === "focus") {
+
+      modeTitle.textContent =
+        "Focus";
+
+    } else if (
+      pomodoroMode === "shortBreak"
+    ) {
+
+      modeTitle.textContent =
+        "Short Break";
+
+    } else {
+
+      modeTitle.textContent =
+        "Long Break";
+
+    }
+
+  }
+
+}
+
+
+// ----------------------------------------
+// Save Pomodoro state
+// ----------------------------------------
+
+function savePomodoroState() {
+
+  let state = {
+
+    mode:
+      pomodoroMode,
+
+    remainingSeconds:
+      getPomodoroRemainingSeconds(),
+
+    endTime:
+      pomodoroEndTime
+
+  };
+
+  localStorage.setItem(
+    "pomodoroState",
+    JSON.stringify(state)
+  );
+}
+
+
+// ----------------------------------------
+// Start Pomodoro
+// ----------------------------------------
+
 function startPomodoro() {
-  if (pomodoroInterval) return;
+
+  // Already running
+  if (pomodoroEndTime !== null) {
+    return;
+  }
 
   pomodoroEndTime =
     Date.now() +
     pomodoroRemainingSeconds * 1000;
 
-  pomodoroInterval = setInterval(function () {
+  savePomodoroState();
 
-    let remaining = Math.max(
-      0,
-      Math.floor(
-        (pomodoroEndTime - Date.now()) / 1000
-      )
-    );
 
-    pomodoroRemainingSeconds = remaining;
+  pomodoroInterval =
+    setInterval(function () {
 
-    updatePomodoroDisplay();
+      let remaining =
+        getPomodoroRemainingSeconds();
 
-    if (remaining <= 0) {
-      completePomodoro();
-    }
+      updatePomodoroDisplay();
 
-  }, 1000);
+
+      if (remaining <= 0) {
+
+        completePomodoro();
+
+      }
+
+    }, 250);
+
 }
+
+
+// ----------------------------------------
+// Pause Pomodoro
+// ----------------------------------------
 
 function pausePomodoro() {
 
-  if (pomodoroEndTime) {
+  if (pomodoroEndTime !== null) {
 
-    pomodoroRemainingSeconds = Math.max(
-      0,
-      Math.floor(
-        (pomodoroEndTime - Date.now()) / 1000
-      )
-    );
+    pomodoroRemainingSeconds =
+      getPomodoroRemainingSeconds();
 
   }
 
   pomodoroEndTime = null;
 
-  clearInterval(pomodoroInterval);
+  clearInterval(
+    pomodoroInterval
+  );
+
   pomodoroInterval = null;
+
+  savePomodoroState();
 
   updatePomodoroDisplay();
 }
 
+
+// ----------------------------------------
+// Reset Pomodoro
+// ----------------------------------------
+
 function resetPomodoro() {
 
-  pausePomodoro();
+  clearInterval(
+    pomodoroInterval
+  );
+
+  pomodoroInterval = null;
+
+  pomodoroEndTime = null;
 
   pomodoroRemainingSeconds =
     pomodoroLengths[pomodoroMode];
 
+  savePomodoroState();
+
   updatePomodoroDisplay();
 }
 
+
+// ----------------------------------------
+// Change Pomodoro mode
+// ----------------------------------------
+
 function setPomodoroMode(mode) {
 
-  pausePomodoro();
+  clearInterval(
+    pomodoroInterval
+  );
+
+  pomodoroInterval = null;
+
+  pomodoroEndTime = null;
 
   pomodoroMode = mode;
 
   pomodoroRemainingSeconds =
     pomodoroLengths[mode];
 
+  savePomodoroState();
+
   updatePomodoroDisplay();
 }
 
-function completePomodoro() {
-  pausePomodoro();
 
-  if (pomodoroMode === "focus") {
+// ----------------------------------------
+// COMPLETE POMODORO
+// ----------------------------------------
+
+function completePomodoro() {
+
+  // Save the mode BEFORE changing anything.
+  // This is important for session logging.
+
+  let completedMode =
+    pomodoroMode;
+
+
+  let completedDuration =
+    pomodoroLengths[
+      completedMode
+    ];
+
+
+  // Stop timer first
+
+  clearInterval(
+    pomodoroInterval
+  );
+
+  pomodoroInterval = null;
+
+  pomodoroEndTime = null;
+
+
+  // -----------------------------
+  // LOG FOCUS SESSION
+  // -----------------------------
+
+  if (completedMode === "focus") {
+
     sessions.push({
+
       type: "pomodoro",
-      durationSeconds: pomodoroLengths.focus,
-      date: new Date().toISOString().split("T")[0]
+
+      durationSeconds:
+        completedDuration,
+
+      date:
+        getLocalDateString()
+
     });
 
-    localStorage.setItem("sessions", JSON.stringify(sessions));
+    saveSessions();
+
     updateStats();
 
-    alert("Focus session complete!");
-    setPomodoroMode("shortBreak");
-  } else {
-    alert("Break complete!");
-    setPomodoroMode("focus");
-  }
-}
+    // Move to break
 
+    pomodoroMode =
+      "shortBreak";
 
-// Stopwatch
-let stopwatchStartTime = null;
-let stopwatchElapsedBeforePause = 0;
-let stopwatchInterval = null;
+    pomodoroRemainingSeconds =
+      pomodoroLengths.shortBreak;
 
-let sessions = JSON.parse(localStorage.getItem("sessions")) || [];
-
-function showSection(sectionId) {
-  document.querySelectorAll(".page").forEach(function (page) {
-    page.classList.add("hidden");
-  });
-
-  document.getElementById(sectionId).classList.remove("hidden");
-  
-  document.querySelectorAll(".sidebar button").forEach(btn => {
-  btn.classList.remove("active");
-});
-
-event.target.classList.add("active");
-}
-
-function formatTime(seconds) {
-  let hrs = Math.floor(seconds / 3600);
-  let mins = Math.floor((seconds % 3600) / 60);
-  let secs = seconds % 60;
-
-  return (
-    String(hrs).padStart(2, "0") +
-    ":" +
-    String(mins).padStart(2, "0") +
-    ":" +
-    String(secs).padStart(2, "0")
-  );
-}
-
-function updateStopwatchDisplay() {
-  let elapsed = stopwatchElapsedBeforePause;
-
-  if (stopwatchStartTime) {
-    elapsed += Math.floor(
-      (Date.now() - stopwatchStartTime) / 1000
+    alert(
+      "Focus session complete!"
     );
+
   }
 
-  document.getElementById("stopwatchDisplay").textContent =
-    formatTime(elapsed);
-}
 
-function startStopwatch() {
-  if (stopwatchInterval) return;
+  // -----------------------------
+  // BREAK FINISHED
+  // -----------------------------
 
-  stopwatchStartTime = Date.now();
+  else {
 
-  stopwatchInterval = setInterval(function () {
-    updateStopwatchDisplay();
-  }, 1000);
-}
+    pomodoroMode =
+      "focus";
 
-function pauseStopwatch() {
-  if (stopwatchStartTime) {
-    stopwatchElapsedBeforePause += Math.floor(
-      (Date.now() - stopwatchStartTime) / 1000
+    pomodoroRemainingSeconds =
+      pomodoroLengths.focus;
+
+    alert(
+      "Break complete!"
     );
+
   }
 
-  stopwatchStartTime = null;
 
-  clearInterval(stopwatchInterval);
-  stopwatchInterval = null;
+  savePomodoroState();
 
-  updateStopwatchDisplay();
+  updatePomodoroDisplay();
 }
 
-function resetStopwatch() {
-  pauseStopwatch();
 
-  stopwatchElapsedBeforePause = 0;
 
-  updateStopwatchDisplay();
-}
+// ========================================
+// SESSION STORAGE
+// ========================================
 
-function logStopwatchSession() {
-  let totalSeconds = stopwatchElapsedBeforePause;
-
-  if (stopwatchStartTime) {
-    totalSeconds += Math.floor(
-      (Date.now() - stopwatchStartTime) / 1000
-    );
-  }
-
-  if (totalSeconds === 0) return;
-
-  sessions.push({
-    type: "stopwatch",
-    durationSeconds: totalSeconds,
-    date: new Date().toISOString().split("T")[0]
-  });
+function saveSessions() {
 
   localStorage.setItem(
     "sessions",
     JSON.stringify(sessions)
   );
 
-  resetStopwatch();
-  updateStats();
-}
-// Stats
-// Calendar
-
-function generateCalendar() {
-  let calendar = document.getElementById("calendar");
-  calendar.innerHTML = "";
-
-  let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  weekdays.forEach(function (dayName) {
-    let weekdayDiv = document.createElement("div");
-    weekdayDiv.classList.add("weekday");
-    weekdayDiv.textContent = dayName;
-    calendar.appendChild(weekdayDiv);
-  });
-
-  let today = new Date();
-
-  let year = today.getFullYear();
-  let month = today.getMonth() + currentMonthOffset;
-
-  let firstDay = new Date(year, month, 1);
-  let lastDay = new Date(year, month + 1, 0);
-
-  let startDayOfWeek = firstDay.getDay();
-  let daysInMonth = lastDay.getDate();
-
-  document.getElementById("calendarTitle").textContent =
-    new Date(year, month).toLocaleString("default", {
-      month: "long",
-      year: "numeric"
-    });
-
-  for (let i = 0; i < startDayOfWeek; i++) {
-    let emptyDiv = document.createElement("div");
-    emptyDiv.classList.add("day");
-    emptyDiv.style.visibility = "hidden";
-    calendar.appendChild(emptyDiv);
-  }
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    let date = new Date(year, month, day);
-    let dateStr = date.toISOString().split("T")[0];
-
-    let daySeconds = sessions
-      .filter(function (s) {
-        return s.date === dateStr;
-      })
-      .reduce(function (sum, s) {
-        return sum + s.durationSeconds;
-      }, 0);
-
-    let minutes = Math.round(daySeconds / 60);
-
-    let dayDiv = document.createElement("div");
-    dayDiv.classList.add("day");
-
-    if (minutes >= 120) {
-      dayDiv.classList.add("level-4");
-    } else if (minutes >= 60) {
-      dayDiv.classList.add("level-3");
-    } else if (minutes >= 30) {
-      dayDiv.classList.add("level-2");
-    } else if (minutes > 0) {
-      dayDiv.classList.add("level-1");
-    }
-
-    let todayStr = new Date().toISOString().split("T")[0];
-
-    if (dateStr === todayStr) {
-      dayDiv.classList.add("today");
-    }
-
-    dayDiv.textContent = day;
-    dayDiv.title = minutes + " minutes logged";
-
-    calendar.appendChild(dayDiv);
-  }
 }
 
-function changeMonth(direction) {
-  currentMonthOffset += direction;
-  generateCalendar();
-}
+
+
+// ========================================
+// STATISTICS
+// ========================================
 
 function updateStats() {
-  let today = new Date().toISOString().split("T")[0];
 
-  let totalSeconds = sessions.reduce(function (sum, session) {
-    return sum + session.durationSeconds;
-  }, 0);
+  let today =
+    getLocalDateString();
 
-  let todaySeconds = sessions
-    .filter(function (session) {
-      return session.date === today;
-    })
-    .reduce(function (sum, session) {
-      return sum + session.durationSeconds;
-    }, 0);
 
-  document.getElementById("sessionCount").textContent =
-    "Sessions: " + sessions.length;
+  // --------------------------------------
+  // Total time
+  // --------------------------------------
 
-  document.getElementById("todayTime").textContent =
-    "Today: " + Math.round(todaySeconds / 60) + " minutes";
+  let totalSeconds =
+    sessions.reduce(
+      function (sum, session) {
 
-  document.getElementById("totalTime").textContent =
-    "Total time: " + Math.round(totalSeconds / 60) + " minutes";
-  generateCalendar();
+        return (
+          sum +
+          session.durationSeconds
+        );
+
+      },
+      0
+    );
+
+
+  // --------------------------------------
+  // Today's time
+  // --------------------------------------
+
+  let todaySeconds =
+    sessions
+      .filter(
+        function (session) {
+
+          return (
+            session.date === today
+          );
+
+        }
+      )
+
+      .reduce(
+        function (sum, session) {
+
+          return (
+            sum +
+            session.durationSeconds
+          );
+
+        },
+        0
+      );
+
+
+  // --------------------------------------
+  // Number of Pomodoro focus sessions
+  // --------------------------------------
+
+  let pomodoroSessions =
+    sessions.filter(
+      function (session) {
+
+        return (
+          session.type ===
+          "pomodoro"
+        );
+
+      }
+    ).length;
+
+
+  // --------------------------------------
+  // Update page
+  // --------------------------------------
+
+  let sessionCountElement =
+    document.getElementById(
+      "sessionCount"
+    );
+
+  if (sessionCountElement) {
+
+    sessionCountElement.textContent =
+      "Sessions: " +
+      sessions.length;
+
+  }
+
+
+  let pomodoroCountElement =
+    document.getElementById(
+      "pomodoroCount"
+    );
+
+  if (pomodoroCountElement) {
+
+    pomodoroCountElement.textContent =
+      "Pomodoro sessions: " +
+      pomodoroSessions;
+
+  }
+
+
+  let todayElement =
+    document.getElementById(
+      "todayTime"
+    );
+
+  if (todayElement) {
+
+    todayElement.textContent =
+      "Today: " +
+      Math.floor(
+        todaySeconds / 60
+      ) +
+      " minutes";
+
+  }
+
+
+  let totalElement =
+    document.getElementById(
+      "totalTime"
+    );
+
+  if (totalElement) {
+
+    totalElement.textContent =
+      "Total time: " +
+      formatTotalTime(
+        totalSeconds
+      );
+
+  }
+
+
+  // Update your existing calendar
+
+  if (
+    typeof generateCalendar ===
+    "function"
+  ) {
+
+    generateCalendar();
+
+  }
+
 }
 
-function changeBackground(background) {
-  document.body.style.background = background;
-  localStorage.setItem("background", background);
-}
 
-let savedBackground = localStorage.getItem("background");
-if (savedBackground) {
-  document.body.style.background = savedBackground;
-}
 
-updateStopwatchDisplay();
-updateStats();
-
-updatePomodoroDisplay();
+// ========================================
+// RESET STATS
+// ========================================
 
 function resetStats() {
+
   sessions = [];
-  localStorage.setItem("sessions", JSON.stringify(sessions));
+
+  saveSessions();
+
   updateStats();
-  alert("Stats reset!");
+
 }
+
+
+
+// ========================================
+// RESTORE STOPWATCH AFTER REFRESH
+// ========================================
+
+function restoreStopwatch() {
+
+  let saved =
+    localStorage.getItem(
+      "stopwatchState"
+    );
+
+  if (!saved) {
+
+    updateStopwatchDisplay();
+    return;
+
+  }
+
+
+  let state =
+    JSON.parse(saved);
+
+
+  stopwatchStartTime =
+    state.startTime || null;
+
+  stopwatchElapsedBeforePause =
+    state.elapsedBeforePause || 0;
+
+
+  // If it was running when page closed,
+  // resume display updates.
+
+  if (
+    stopwatchStartTime !== null
+  ) {
+
+    stopwatchInterval =
+      setInterval(
+        updateStopwatchDisplay,
+        1000
+      );
+
+  }
+
+
+  updateStopwatchDisplay();
+}
+
+
+
+// ========================================
+// RESTORE POMODORO AFTER REFRESH
+// ========================================
+
+function restorePomodoro() {
+
+  let saved =
+    localStorage.getItem(
+      "pomodoroState"
+    );
+
+
+  if (!saved) {
+
+    updatePomodoroDisplay();
+    return;
+
+  }
+
+
+  let state =
+    JSON.parse(saved);
+
+
+  pomodoroMode =
+    state.mode ||
+    "focus";
+
+
+  pomodoroRemainingSeconds =
+    state.remainingSeconds ??
+    pomodoroLengths[
+      pomodoroMode
+    ];
+
+
+  pomodoroEndTime =
+    state.endTime || null;
+
+
+  // Timer was running before refresh
+
+  if (
+    pomodoroEndTime !== null
+  ) {
+
+    // Timer finished while the page
+    // was closed.
+
+    if (
+      Date.now() >=
+      pomodoroEndTime
+    ) {
+
+      completePomodoro();
+
+      return;
+
+    }
+
+
+    // Timer is still running.
+
+    pomodoroInterval =
+      setInterval(
+        function () {
+
+          let remaining =
+            getPomodoroRemainingSeconds();
+
+          updatePomodoroDisplay();
+
+          if (
+            remaining <= 0
+          ) {
+
+            completePomodoro();
+
+          }
+
+        },
+        250
+      );
+
+  }
+
+
+  updatePomodoroDisplay();
+}
+
+
+
+// ========================================
+// START APP
+// ========================================
+
+restoreStopwatch();
+restorePomodoro();
+updateStats();
 
 // Customization
 function uploadBackground() {
